@@ -1,0 +1,1402 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "The Prometheus data source on VM5.",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    }
+  ],
+  "uid": "flusso-messaggistica",
+  "title": "Moodle 4.5 messaging, running on microservices",
+  "description": "From a click in Moodle to the delivery on a channel. The top row says WHAT IS IN THE SYSTEM right now, the drawing says WHO IS WORKING, the bottom row says HOW MANY. A number is grey while it is zero and takes colour only when something has happened.",
+  "tags": [
+    "tesi",
+    "demo",
+    "messaging"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1s",
+  "time": {
+    "from": "now-2m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "1s",
+      "2s",
+      "5s",
+      "10s",
+      "30s"
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "ConversationService · outbox",
+      "description": "Events written by the ConversationService in the SAME TRANSACTION as the fact, and not yet handed to the broker. It rises the instant a message or a contact request is stored, and returns to zero when the relay has published. That gap is the Transactional Outbox: the fact and its event cannot disagree, because a single commit decides both.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(conversation_outbox_pending{service='conversation'}) or vector(0)",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "text": {
+          "valueSize": 44
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6b7280",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "NotificationService · outbox",
+      "description": "The same, for the NotificationService. In a contact request the two outboxes fill one after the other: the ConversationService publishes, the NotificationService reacts and publishes in turn. Two contexts that do not know each other applying the same pattern.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(notification_outbox_pending{service='notification'}) or vector(0)",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "text": {
+          "valueSize": 44
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6b7280",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Deliveries still pending",
+      "description": "Deliveries taken in charge and not yet completed. During a burst it rises and falls again: that is the backlog the gateway is working through, and how long it takes to return to zero is the measure of the fan-out scenario. A value that rises and does NOT fall means a processor is not answering.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(delivery_gateway_deliveries{service='delivery',status='pending'}) or vector(0)",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "text": {
+          "valueSize": 44
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6b7280",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Deliveries failed after 5 attempts",
+      "description": "Deliveries whose five attempts were all refused by the channel. They are NOT lost: the envelope is kept in the dead-letter store together with the reason it failed, and can be replayed. Nothing is discarded silently, and during a demonstration this stays at zero.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "(sum(delivery_gateway_deliveries{service='delivery',status='dead'}) or vector(0))",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "text": {
+          "valueSize": 44
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6b7280",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "canvas",
+      "title": "",
+      "description": "Each block carries what it owns, and lights up while it is working. The monolith never lights: it exposes no metrics. Its ARROW does, fed by the requests the services answered, so what you see is not the monolith but the synchronous call leaving it. The DeliveryGateway has no inbound synchronous arrow, which is why the broker is its only way in. The two providers below the gateway are stand-ins outside the boundary: only the arrows reaching them light.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 17,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "sincrono_c",
+          "expr": "clamp_max(clamp_min(((sum(conversation_request_duration_seconds_count{service='conversation', route!~'.*(healthz|readyz|metrics).*'}) or vector(0)) - (sum(conversation_request_duration_seconds_count{service='conversation', route!~'.*(healthz|readyz|metrics).*'} offset 15s) or vector(0))), 0), 1)"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "B",
+          "instant": true,
+          "legendFormat": "sincrono_n",
+          "expr": "clamp_max(clamp_min(((sum(notification_request_duration_seconds_count{service='notification', route!~'.*(healthz|readyz|metrics).*'}) or vector(0)) - (sum(notification_request_duration_seconds_count{service='notification', route!~'.*(healthz|readyz|metrics).*'} offset 15s) or vector(0))), 0), 1)"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "C",
+          "instant": true,
+          "legendFormat": "pubbl_c",
+          "expr": "clamp_max(clamp_min(((sum(conversation_events_published_total{service='conversation'}) or vector(0)) - (sum(conversation_events_published_total{service='conversation'} offset 15s) or vector(0))), 0), 1)"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "D",
+          "instant": true,
+          "legendFormat": "pubbl_n",
+          "expr": "clamp_max(clamp_min(((sum(notification_events_published_total{service='notification'}) or vector(0)) - (sum(notification_events_published_total{service='notification'} offset 15s) or vector(0))), 0), 1)"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "E",
+          "instant": true,
+          "legendFormat": "conversation",
+          "expr": "clamp_max(clamp_min(((sum(conversation_messages_persisted_total{service='conversation'}) or vector(0)) - (sum(conversation_messages_persisted_total{service='conversation'} offset 15s) or vector(0))) + ((sum(conversation_events_published_total{service='conversation'}) or vector(0)) - (sum(conversation_events_published_total{service='conversation'} offset 15s) or vector(0))), 0), 1)"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "F",
+          "instant": true,
+          "legendFormat": "notification",
+          "expr": "clamp_max(clamp_min(((sum(notification_notifications_persisted_total{service='notification'}) or vector(0)) - (sum(notification_notifications_persisted_total{service='notification'} offset 15s) or vector(0))) + ((sum(notification_events_published_total{service='notification'}) or vector(0)) - (sum(notification_events_published_total{service='notification'} offset 15s) or vector(0))) + ((sum(notification_events_consumed_total{service='notification'}) or vector(0)) - (sum(notification_events_consumed_total{service='notification'} offset 15s) or vector(0))), 0), 1)"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "G",
+          "instant": true,
+          "legendFormat": "delivery",
+          "expr": "clamp_max(clamp_min(((sum(delivery_gateway_deliveries{service='delivery',status='delivered'}) or vector(0)) - (sum(delivery_gateway_deliveries{service='delivery',status='delivered'} offset 15s) or vector(0))), 0), 1)"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "H",
+          "instant": true,
+          "legendFormat": "broker",
+          "expr": "clamp_max(clamp_min(((sum(conversation_events_published_total{service='conversation'}) or vector(0)) - (sum(conversation_events_published_total{service='conversation'} offset 15s) or vector(0))) + ((sum(notification_events_published_total{service='notification'}) or vector(0)) - (sum(notification_events_published_total{service='notification'} offset 15s) or vector(0))), 0), 1)"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "Time",
+            "mode": "outer"
+          }
+        }
+      ],
+      "options": {
+        "inlineEditing": true,
+        "showAdvancedTypes": true,
+        "panZoom": true,
+        "infinitePan": false,
+        "root": {
+          "type": "frame",
+          "name": "topologia",
+          "background": {
+            "color": {
+              "fixed": "transparent"
+            }
+          },
+          "border": {
+            "color": {
+              "fixed": "transparent"
+            },
+            "width": 0
+          },
+          "constraint": {
+            "horizontal": "left",
+            "vertical": "top"
+          },
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 100,
+            "height": 100
+          },
+          "elements": [
+            {
+              "type": "text",
+              "name": "titolo",
+              "config": {
+                "align": "center",
+                "valign": "middle",
+                "size": 20,
+                "color": {
+                  "fixed": "#1f2937"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "From Moodle to the channel, one block at a time"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 47,
+                "top": 2,
+                "width": 1245,
+                "height": 36,
+                "rotation": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "monolite",
+              "config": {
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "#ffffff"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "Moodle"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "#3d5a80"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#6e7681"
+                },
+                "width": 2
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 40,
+                "top": 150,
+                "width": 230,
+                "height": 64,
+                "rotation": 0
+              },
+              "connections": [
+                {
+                  "targetName": "conversazioni",
+                  "source": {
+                    "x": 1,
+                    "y": 0
+                  },
+                  "target": {
+                    "x": -1,
+                    "y": 0
+                  },
+                  "color": {
+                    "field": "sincrono_c",
+                    "fixed": "#8a929c"
+                  },
+                  "size": {
+                    "fixed": 3
+                  },
+                  "path": "straight"
+                },
+                {
+                  "targetName": "notifiche",
+                  "source": {
+                    "x": 1,
+                    "y": 0
+                  },
+                  "target": {
+                    "x": -1,
+                    "y": 0
+                  },
+                  "color": {
+                    "field": "sincrono_n",
+                    "fixed": "#8a929c"
+                  },
+                  "size": {
+                    "fixed": 3
+                  },
+                  "path": "straight"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "name": "monolite-didascalia",
+              "config": {
+                "align": "center",
+                "valign": "top",
+                "size": 14,
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "the monolith · exposes no metrics"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 40,
+                "top": 218,
+                "width": 230,
+                "height": 26,
+                "rotation": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "conversazioni",
+              "config": {
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "#ffffff"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "ConversationService"
+                }
+              },
+              "background": {
+                "color": {
+                  "field": "conversation",
+                  "fixed": "#8a929c"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#6e7681"
+                },
+                "width": 2
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 355,
+                "top": 60,
+                "width": 230,
+                "height": 64,
+                "rotation": 0
+              },
+              "connections": [
+                {
+                  "targetName": "broker",
+                  "source": {
+                    "x": 1,
+                    "y": 0
+                  },
+                  "target": {
+                    "x": -1,
+                    "y": 0
+                  },
+                  "color": {
+                    "field": "pubbl_c",
+                    "fixed": "#8a929c"
+                  },
+                  "size": {
+                    "fixed": 3
+                  },
+                  "path": "straight"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "name": "conversazioni-didascalia",
+              "config": {
+                "align": "center",
+                "valign": "top",
+                "size": 14,
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "conversations, messages, contacts"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 355,
+                "top": 128,
+                "width": 230,
+                "height": 26,
+                "rotation": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "notifiche",
+              "config": {
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "#ffffff"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "NotificationService"
+                }
+              },
+              "background": {
+                "color": {
+                  "field": "notification",
+                  "fixed": "#8a929c"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#6e7681"
+                },
+                "width": 2
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 355,
+                "top": 240,
+                "width": 230,
+                "height": 64,
+                "rotation": 0
+              },
+              "connections": [
+                {
+                  "targetName": "broker",
+                  "source": {
+                    "x": 1,
+                    "y": 0
+                  },
+                  "target": {
+                    "x": -1,
+                    "y": 0
+                  },
+                  "color": {
+                    "field": "pubbl_n",
+                    "fixed": "#8a929c"
+                  },
+                  "size": {
+                    "fixed": 3
+                  },
+                  "path": "straight"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "name": "notifiche-didascalia",
+              "config": {
+                "align": "center",
+                "valign": "top",
+                "size": 14,
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "notifications, read state, popup"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 355,
+                "top": 308,
+                "width": 230,
+                "height": 26,
+                "rotation": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "broker",
+              "config": {
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "#ffffff"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "RabbitMQ"
+                }
+              },
+              "background": {
+                "color": {
+                  "field": "broker",
+                  "fixed": "#8a929c"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#6e7681"
+                },
+                "width": 2
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 670,
+                "top": 150,
+                "width": 230,
+                "height": 64,
+                "rotation": 0
+              },
+              "connections": [
+                {
+                  "targetName": "recapito",
+                  "source": {
+                    "x": 1,
+                    "y": 0
+                  },
+                  "target": {
+                    "x": -1,
+                    "y": 0
+                  },
+                  "color": {
+                    "field": "delivery",
+                    "fixed": "#8a929c"
+                  },
+                  "size": {
+                    "fixed": 3
+                  },
+                  "path": "straight"
+                },
+                {
+                  "targetName": "notifiche",
+                  "source": {
+                    "x": -1,
+                    "y": 0
+                  },
+                  "target": {
+                    "x": 1,
+                    "y": 0
+                  },
+                  "color": {
+                    "field": "notification",
+                    "fixed": "#8a929c"
+                  },
+                  "size": {
+                    "fixed": 3
+                  },
+                  "path": "straight"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "name": "broker-didascalia",
+              "config": {
+                "align": "center",
+                "valign": "top",
+                "size": 14,
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "events between contexts"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 670,
+                "top": 218,
+                "width": 230,
+                "height": 26,
+                "rotation": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "recapito",
+              "config": {
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "#ffffff"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "DeliveryGateway"
+                }
+              },
+              "background": {
+                "color": {
+                  "field": "delivery",
+                  "fixed": "#8a929c"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#6e7681"
+                },
+                "width": 2
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 985,
+                "top": 150,
+                "width": 230,
+                "height": 64,
+                "rotation": 0
+              },
+              "connections": [
+                {
+                  "targetName": "esterno",
+                  "source": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "target": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "color": {
+                    "field": "delivery",
+                    "fixed": "#8a929c"
+                  },
+                  "size": {
+                    "fixed": 3
+                  },
+                  "path": "straight"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "name": "recapito-didascalia",
+              "config": {
+                "align": "center",
+                "valign": "top",
+                "size": 14,
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "channels, attempts, outcomes"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 985,
+                "top": 218,
+                "width": 230,
+                "height": 26,
+                "rotation": 0
+              }
+            },
+            {
+              "type": "rectangle",
+              "name": "esterno",
+              "config": {
+                "align": "center",
+                "valign": "middle",
+                "size": 18,
+                "color": {
+                  "fixed": "#ffffff"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "External delivery"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "#3d5a80"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "#6e7681"
+                },
+                "width": 2
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 985,
+                "top": 350,
+                "width": 230,
+                "height": 56,
+                "rotation": 0
+              },
+              "connections": []
+            },
+            {
+              "type": "text",
+              "name": "esterno-didascalia",
+              "config": {
+                "align": "center",
+                "valign": "top",
+                "size": 14,
+                "color": {
+                  "fixed": "#4b5563"
+                },
+                "text": {
+                  "mode": "fixed",
+                  "fixed": "email and Airnotifier · outside the boundary"
+                }
+              },
+              "background": {
+                "color": {
+                  "fixed": "transparent"
+                }
+              },
+              "border": {
+                "color": {
+                  "fixed": "transparent"
+                },
+                "width": 0
+              },
+              "constraint": {
+                "horizontal": "left",
+                "vertical": "top"
+              },
+              "placement": {
+                "left": 915,
+                "top": 410,
+                "width": 370,
+                "height": 26,
+                "rotation": 0
+              }
+            }
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#7c8590",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Message or notification stored",
+      "description": "A message written by the ConversationService, or a notification written by the NotificationService. This is the only step served synchronously, and the only one the user waits for.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 22
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "(sum(conversation_messages_persisted_total{service='conversation'}) or vector(0)) + (sum(notification_notifications_persisted_total{service='notification'}) or vector(0))",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "text": {
+          "valueSize": 44
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6b7280",
+                "value": null
+              },
+              {
+                "color": "light-blue",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Event handed to the broker",
+      "description": "Events the relay has delivered to the broker. It always rises AFTER the first panel, never before: that order is what the Transactional Outbox guarantees. In a contact request it rises twice, once per context.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 22
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "(sum(conversation_events_published_total{service='conversation'}) or vector(0)) + (sum(notification_events_published_total{service='notification'}) or vector(0))",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "text": {
+          "valueSize": 44
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6b7280",
+                "value": null
+              },
+              {
+                "color": "light-blue",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Consumed by NotificationService",
+      "description": "Events the NotificationService took from the broker. It stays at zero when the action crosses a single context -- a message, or a system notification -- and rises for a contact request, the only case where one context reacts to what another published.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 22
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "(sum(notification_events_consumed_total{service='notification'}) or vector(0))",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "text": {
+          "valueSize": 44
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6b7280",
+                "value": null
+              },
+              {
+                "color": "light-blue",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Delivery completed on a channel",
+      "description": "Deliveries carried through by the DeliveryGateway, whatever context produced the event. It closes the chain, and it happens AFTER the user already had their answer.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 22
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "(sum(delivery_gateway_deliveries{service='delivery',status='delivered'}) or vector(0))",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "auto",
+        "text": {
+          "valueSize": 44
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6b7280",
+                "value": null
+              },
+              {
+                "color": "light-blue",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": []
+  }
+}

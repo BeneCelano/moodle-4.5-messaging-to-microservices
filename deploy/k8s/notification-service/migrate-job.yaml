@@ -1,0 +1,58 @@
+# Application of the NotificationService schema migrations, by a Job run before the Deployment.
+#
+#   kubectl apply -f deploy/k8s/notification-service/migrate-job.yaml
+#   kubectl -n messaging wait --for=condition=complete job/notification-service-migrate --timeout=120s
+#
+# The views user_view and site_view are created by services/notification/scripts/schema.sql.
+# backoffLimit zero.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notification-service-migrate
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: migration
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: migrate
+          image: notification-service:0.1.10
+          imagePullPolicy: IfNotPresent
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: notification-service-config
+            - secretRef:
+                name: notification-service-secret
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "192Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

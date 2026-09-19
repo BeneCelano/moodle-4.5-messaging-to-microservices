@@ -1,0 +1,57 @@
+# Initial seed of the service schema from the monolith's, with the seed identity. On VM2 first:
+#
+#   CREATE USER 'conversation_seed'@'%' IDENTIFIED BY '...';
+#   GRANT SELECT ON moodle_db.* TO 'conversation_seed'@'%';
+#   GRANT SELECT, INSERT, UPDATE, DELETE, ALTER ON conversation_service.* TO 'conversation_seed'@'%';
+#
+# Then:
+#
+#   kubectl apply -f seed-secret.example.yaml   (copied outside the repository and filled in)
+#   kubectl apply -f seed-job.yaml
+#   kubectl -n messaging logs -f job/conversation-service-seed
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: conversation-service-seed
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: conversation-service
+    app.kubernetes.io/component: seed
+spec:
+  # The seed can be repeated and resumes where it stopped.
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: conversation-service
+        app.kubernetes.io/component: seed
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: seed
+          image: conversation-service:0.2.14
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - scripts/seed_from_monolith.py
+            - --schema
+            - moodle_db
+            - --prefix
+            - mdl_
+          envFrom:
+            - configMapRef:
+                name: conversation-service-config
+            # The seed credentials override the service's: this reference must stay last.
+            - secretRef:
+                name: conversation-service-seed-secret
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

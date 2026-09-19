@@ -1,0 +1,22 @@
+# Exposure of the NotificationService on a static node port, called by the monolith and scraped
+# from VM5.
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: notification
+spec:
+  type: NodePort
+  selector:
+    # Name and role together: the name alone would also match the Job pods.
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/component: notification
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30083

@@ -1,0 +1,57 @@
+# Application of the DeliveryGateway schema migrations, by a Job run before the Deployment.
+#
+#   kubectl apply -f deploy/k8s/delivery-gateway/migrate-job.yaml
+#   kubectl -n messaging wait --for=condition=complete job/delivery-gateway-migrate --timeout=120s
+#
+# backoffLimit zero.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: delivery-gateway-migrate
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: delivery-gateway
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: migration
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: delivery-gateway
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: migrate
+          image: delivery-gateway:0.1.9
+          imagePullPolicy: IfNotPresent
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: delivery-gateway-config
+            - secretRef:
+                name: delivery-gateway-secret
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "192Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

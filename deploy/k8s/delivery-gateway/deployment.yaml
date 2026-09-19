@@ -1,0 +1,114 @@
+# Deployment of the DeliveryGateway: one replica at rest, two under a burst (hpa.yaml).
+#
+# Steady-state split of the two-CPU budget:
+#
+#     ConversationService   2 x 400m = 800m   fixed
+#     NotificationService   2 x 200m = 400m   fixed
+#     DeliveryGateway       1 x 200m          -> 2 x 200m under a burst
+#     RabbitMQ                    200m
+#     ---------------------------------------------------------------
+#     at rest 1600m, at the peak 1800m
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delivery-gateway
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: delivery-gateway
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: delivery
+spec:
+  # Replicas at rest; the HPA owns this value while it is active.
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: delivery-gateway
+  # maxSurge zero: a third pod would need a third node.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: delivery-gateway
+        app.kubernetes.io/part-of: moodle-messaging
+        # The role tells the service pods from those of the Jobs, which carry the same name.
+        app.kubernetes.io/component: delivery
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Replicas on distinct nodes.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: delivery-gateway
+                  app.kubernetes.io/component: delivery
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: delivery-gateway
+          image: delivery-gateway:0.1.9
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: delivery-gateway-config
+            - secretRef:
+                name: delivery-gateway-secret
+          resources:
+            # 200m per replica, request equal to limit (Guaranteed).
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          # Readiness looks at the database, not at the broker (see app/api/routers/health.py).
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 3
+            failureThreshold: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      # The shutdown leaves time to complete the deliveries already started.
+      terminationGracePeriodSeconds: 30

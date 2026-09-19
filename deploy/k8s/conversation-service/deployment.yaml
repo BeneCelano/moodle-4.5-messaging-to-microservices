@@ -1,0 +1,109 @@
+# Deployment of the ConversationService: two replicas of 400m, request equal to limit
+# (Guaranteed).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: conversation-service
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: conversation-service
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: core-domain
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: conversation-service
+  # Rolling update with maxSurge zero: each replica needs its own node (anti-affinity below).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: conversation-service
+        app.kubernetes.io/part-of: moodle-messaging
+        # The role tells the service pods from those of the Jobs, which carry the same name.
+        app.kubernetes.io/component: core-domain
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      # The two replicas must not share a node (required, not preferred).
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: conversation-service
+                  # The role, not the name: a name selector would also keep the Job pods off
+                  # both nodes.
+                  app.kubernetes.io/component: core-domain
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: conversation-service
+          image: conversation-service:0.2.14
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: conversation-service-config
+            - secretRef:
+                name: conversation-service-secret
+          resources:
+            # 400m per replica, request equal to limit.
+            requests:
+              cpu: "400m"
+              memory: "384Mi"
+            limits:
+              cpu: "400m"
+              memory: "384Mi"
+          # Liveness looks at the process only.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          # Readiness looks at the dependencies.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            # Ten seconds to leave the balancer.
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 3
+            failureThreshold: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      # The shutdown leaves the relay time to complete the batch being delivered.
+      terminationGracePeriodSeconds: 30

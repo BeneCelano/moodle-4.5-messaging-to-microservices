@@ -1,0 +1,38 @@
+# Non-secret configuration of the DeliveryGateway. Credentials live in the Secret.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: delivery-gateway-config
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: delivery-gateway
+    app.kubernetes.io/part-of: moodle-messaging
+data:
+  DG_SERVICE_NAME: "delivery-gateway"
+  DG_ENVIRONMENT: "lab"
+  DG_LOG_LEVEL: "INFO"
+
+  # The exchange declared by the ConversationService.
+  DG_RABBITMQ_EXCHANGE: "moodle.messaging"
+  DG_RABBITMQ_QUEUE: "delivery-gateway"
+
+  # The routing keys the gateway binds to, exact keys.
+  DG_RABBITMQ_ROUTING_KEYS: "conversation.message.sent,notification.created"
+
+  # How many assignments the broker hands to each consumer in advance.
+  DG_RABBITMQ_PREFETCH: "16"
+
+  DG_MAX_ATTEMPTS: "5"
+  DG_RETRY_BASE_SECONDS: "2.0"
+  DG_RETRY_MAX_SECONDS: "60.0"
+
+  # The mocks of the external providers, on VM4.
+  DG_SMTP_HOST: "192.168.72.74"
+  DG_SMTP_PORT: "1025"
+  DG_SMTP_TIMEOUT_SECONDS: "10.0"
+  DG_SMTP_FROM_ADDRESS: "noreply@moodle.lab"
+  DG_SMTP_FROM_NAME: "Moodle"
+
+  DG_AIRNOTIFIER_URL: "http://192.168.72.74:8081"
+  DG_AIRNOTIFIER_APP_ID: "commin"
+  DG_AIRNOTIFIER_TIMEOUT_SECONDS: "10.0"

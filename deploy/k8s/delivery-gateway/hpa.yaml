@@ -1,0 +1,42 @@
+# Autoscaling of the DeliveryGateway between one and two replicas, on CPU utilisation. Requires
+# metrics-server, installed by k3s:
+#   kubectl -n kube-system get deploy metrics-server
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: delivery-gateway
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: delivery-gateway
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: delivery
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: delivery-gateway
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # Percentage of the declared request.
+          averageUtilization: 70
+  behavior:
+    scaleUp:
+      # Scale up after fifteen seconds.
+      stabilizationWindowSeconds: 15
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 15
+    scaleDown:
+      # Scale down after five minutes.
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60

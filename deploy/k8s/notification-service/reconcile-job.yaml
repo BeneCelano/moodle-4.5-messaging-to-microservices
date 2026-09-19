@@ -1,0 +1,58 @@
+# Comparison between the service database and the monolith's (missing, differing and surplus rows),
+# with the seed identity.
+#
+#   kubectl delete job notification-service-reconcile -n messaging --ignore-not-found
+#   kubectl apply -f reconcile-job.yaml
+#   kubectl -n messaging logs -f job/notification-service-reconcile
+#
+# To repair instead of report, replace --check with --apply.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notification-service-reconcile
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: reconcile
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/component: reconcile
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: reconcile
+          image: notification-service:0.1.10
+          imagePullPolicy: IfNotPresent
+          # The monolith schema is written literally: $(VAR) expansion sees the variables of
+          # env: only.
+          command:
+            - python
+            - scripts/reconcile.py
+            - --schema
+            - moodle_db
+            - --prefix
+            - mdl_
+            - --check
+          envFrom:
+            - configMapRef:
+                name: notification-service-config
+            # The seed credentials override the service's: this reference must stay last.
+            - secretRef:
+                name: notification-service-seed-secret
+          # Small figures: the comparison is a join run by the engine.
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "384Mi"

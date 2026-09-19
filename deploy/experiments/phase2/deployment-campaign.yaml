@@ -1,0 +1,29 @@
+# Patch that brings the ConversationService to the shape the phase 2 campaign measured: one replica
+# on one exclusive core. run-campaign.sh refuses to start otherwise.
+#
+#   kubectl -n messaging patch deploy conversation-service --patch-file deploy/experiments/phase2/deployment-campaign.yaml
+#
+# Back to the steady state when the campaign is over:
+#
+#   kubectl -n messaging apply -f deploy/k8s/conversation-service/deployment.yaml
+#
+# The two null values remove the rolling update settings and the anti-affinity.
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: motomi6
+      affinity: null
+      containers:
+        - name: conversation-service
+          resources:
+            requests:
+              cpu: "1"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"

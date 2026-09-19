@@ -1,0 +1,61 @@
+# The burst of scenario 4.1, run as a Job with the NotificationService image; the script is mounted
+# from a ConfigMap.
+#
+#   kubectl -n messaging create configmap burst-script --from-file=burst.py --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl -n messaging delete job notification-burst --ignore-not-found
+#   kubectl apply -f burst-job.yaml
+#   kubectl -n messaging logs -f job/notification-burst
+#
+# Recipients and concurrency are set in the command arguments. The Job does not clean up.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notification-burst
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/component: burst
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/component: burst
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: burst
+          image: notification-service:0.1.10
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - /burst/burst.py
+            - --recipients
+            - "2000"
+            - --concurrency
+            - "20"
+          envFrom:
+            - configMapRef:
+                name: notification-service-config
+            - secretRef:
+                name: notification-service-secret
+          volumeMounts:
+            - name: script
+              mountPath: /burst
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "192Mi"
+            limits:
+              cpu: "300m"
+              memory: "384Mi"
+      volumes:
+        - name: script
+          configMap:
+            name: burst-script

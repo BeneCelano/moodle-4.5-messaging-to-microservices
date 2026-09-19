@@ -1,0 +1,28 @@
+# Resource budget of the messaging namespace, sized for the peak:
+#
+#                              requests            limits
+#                            cpu   memory      cpu   memory
+#   steady state            1550m   1664Mi    1800m   1920Mi   kubectl describe resourcequota
+#   + gateway, 2nd replica   200m    256Mi     200m    256Mi
+#   + temporary Job          200m    128Mi     500m    384Mi   the heaviest is the reconciliation
+#   -----------------------------------------------------------
+#   peak                    1950m   2048Mi    2500m   2560Mi
+#   declared here           2500m    2Gi         3    2560Mi
+#
+# Steady state: broker, ConversationService 2 x 400m/384Mi, NotificationService 2 x 200m/192Mi,
+# DeliveryGateway 1 x 200m/256Mi. A pod exceeding the quota is not created; the refusal shows in
+# `kubectl describe`.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: messaging-quota
+  namespace: messaging
+  labels:
+    app.kubernetes.io/part-of: moodle-messaging
+spec:
+  hard:
+    # Limits are the hard cap; requests are what the scheduler reserves.
+    limits.cpu: "3"
+    limits.memory: 2560Mi
+    requests.cpu: "2500m"
+    requests.memory: 2Gi

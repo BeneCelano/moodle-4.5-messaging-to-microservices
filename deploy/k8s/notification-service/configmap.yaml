@@ -1,0 +1,44 @@
+# Non-secret configuration of the NotificationService. Credentials live in the Secret.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-service-config
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: moodle-messaging
+data:
+  NS_SERVICE_NAME: "notification-service"
+  NS_ENVIRONMENT: "lab"
+  NS_LOG_LEVEL: "INFO"
+
+  NS_DB_POOL_SIZE: "10"
+  NS_DB_MAX_OVERFLOW: "10"
+  NS_DB_POOL_TIMEOUT: "5"
+
+  # The exchange declared by the ConversationService.
+  NS_RABBITMQ_EXCHANGE: "moodle.messaging"
+
+  # Publishing side: the outbox relay.
+  NS_PUBLISHER_ENABLED: "true"
+  NS_OUTBOX_POLL_INTERVAL_SECONDS: "0.5"
+  NS_OUTBOX_BATCH_SIZE: "100"
+  NS_OUTBOX_MAX_ATTEMPTS: "10"
+
+  # Consuming side: the queue is bound to an exact key.
+  NS_CONSUMER_ENABLED: "true"
+  NS_RABBITMQ_QUEUE: "notification-service.events"
+  NS_RABBITMQ_ROUTING_KEYS: "conversation.contactrequest.created"
+  NS_RABBITMQ_PREFETCH: "16"
+
+  # How long the site settings read from the view are cached.
+  NS_SITE_SETTINGS_TTL_SECONDS: "300"
+
+  # Public address of the site, used in the links of the composed notifications; keep it equal
+  # to $CFG->wwwroot (`wwwroot` lives in config.php, not in `mdl_config`).
+  NS_SITE_WWWROOT: "http://192.168.72.71/moodle"
+
+  # Read by the smoke test only.
+  NS_SMOKE_BASE_URL: "http://notification-service.messaging.svc.cluster.local:8080"
+  NS_SMOKE_MONOLITH_SCHEMA: "moodle_db"
+  NS_SMOKE_MONOLITH_PREFIX: "mdl_"

@@ -1,0 +1,28 @@
+# Non-secret configuration of the ConversationService. Credentials live in the Secret.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: conversation-service-config
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: conversation-service
+    app.kubernetes.io/part-of: moodle-messaging
+data:
+  CS_SERVICE_NAME: "conversation-service"
+  CS_ENVIRONMENT: "lab"
+  CS_LOG_LEVEL: "INFO"
+
+  # The broker is reached through the in-cluster service name.
+  CS_RABBITMQ_URL: "amqp://messaging@rabbitmq.messaging.svc.cluster.local:5672/"
+  CS_RABBITMQ_EXCHANGE: "moodle.messaging"
+  CS_OUTBOX_POLL_INTERVAL_SECONDS: "0.5"
+  CS_OUTBOX_BATCH_SIZE: "100"
+
+  # Connection pool.
+  CS_DB_POOL_SIZE: "10"
+  CS_DB_MAX_OVERFLOW: "5"
+  CS_DB_POOL_TIMEOUT: "5"
+
+  # Read by the smoke test only, for the boundary check.
+  CS_SMOKE_MONOLITH_SCHEMA: "moodle_db"
+  CS_SMOKE_MONOLITH_PREFIX: "mdl_"

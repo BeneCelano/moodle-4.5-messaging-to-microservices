@@ -1,0 +1,52 @@
+# Full-chain smoke test of the service: HTTP request, database write, event in the same transaction,
+# delivery to the broker, arrival on the queue.
+#
+#   kubectl delete job conversation-service-smoke -n messaging --ignore-not-found
+#   kubectl apply -f smoke-job.yaml
+#   kubectl -n messaging logs -f job/conversation-service-smoke
+#
+# It uses the ordinary credentials of the service and removes the rows it produced (add --keep to
+# leave them). backoffLimit zero.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: conversation-service-smoke
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: conversation-service
+    app.kubernetes.io/component: smoke
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: conversation-service
+        app.kubernetes.io/component: smoke
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: smoke
+          image: conversation-service:0.2.14
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - scripts/smoke.py
+            - --url
+            - http://conversation-service:8080
+          envFrom:
+            - configMapRef:
+                name: conversation-service-config
+            - secretRef:
+                name: conversation-service-secret
+          # Minimal memory reservation, to fit the namespace quota.
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "300m"
+              memory: "384Mi"

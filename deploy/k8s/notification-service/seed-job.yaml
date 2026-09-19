@@ -1,0 +1,69 @@
+# Initial seed of the NotificationService schema from the monolith (notifications and popup rows),
+# after the migrations and before the cutover.
+#
+#   kubectl apply -f deploy/k8s/notification-service/seed-job.yaml
+#   kubectl -n messaging logs -f job/notification-service-seed
+#
+# The templates are sent by message/cli/seed_notification_templates.php, on the monolith machine.
+# Re-run the seed right before the cutover with --full.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notification-service-seed
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: seed
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/component: seed
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: seed
+          image: notification-service:0.1.10
+          imagePullPolicy: IfNotPresent
+          # The monolith schema is written literally ($(VAR) expansion sees the variables of
+          # env: only). For the full copy before the cutover, add --full to this list.
+          command:
+            - python
+            - scripts/seed_from_monolith.py
+            - --schema
+            - moodle_db
+            - --prefix
+            - mdl_
+          envFrom:
+            - configMapRef:
+                name: notification-service-config
+            # The seed credentials override the service's: this reference must stay last.
+            - secretRef:
+                name: notification-service-seed-secret
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "192Mi"
+            limits:
+              cpu: "300m"
+              memory: "384Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

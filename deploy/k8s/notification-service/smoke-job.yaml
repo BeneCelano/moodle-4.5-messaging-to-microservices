@@ -1,0 +1,54 @@
+# Full-chain smoke test of the NotificationService: a notification written through the API, read by
+# the routes the monolith uses, announced to the broker by the outbox, the two views answering.
+#
+#   kubectl delete job notification-service-smoke -n messaging --ignore-not-found
+#   kubectl apply -f smoke-job.yaml
+#   kubectl -n messaging logs -f job/notification-service-smoke
+#
+# Other modes, replacing the command argument:
+#
+#   --contact-request-test   the contact request event consumed and republished
+#   --boundary-test          the monolith schema is not readable, the views are
+#
+# It uses the ordinary credentials of the service and removes the rows it produced. backoffLimit zero.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notification-service-smoke
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/component: smoke
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/component: smoke
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: smoke
+          image: notification-service:0.1.10
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - scripts/smoke.py
+          envFrom:
+            - configMapRef:
+                name: notification-service-config
+            - secretRef:
+                name: notification-service-secret
+          # Minimal memory reservation, to fit the namespace quota.
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "300m"
+              memory: "384Mi"

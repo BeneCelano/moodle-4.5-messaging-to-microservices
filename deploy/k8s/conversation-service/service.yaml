@@ -1,0 +1,20 @@
+# Exposure of the ConversationService through a static node port (no ingress layer).
+apiVersion: v1
+kind: Service
+metadata:
+  name: conversation-service
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: conversation-service
+    app.kubernetes.io/part-of: moodle-messaging
+spec:
+  type: NodePort
+  # Name and role together: the name alone would also match the Job pods.
+  selector:
+    app.kubernetes.io/name: conversation-service
+    app.kubernetes.io/component: core-domain
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30081

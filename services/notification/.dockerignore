@@ -1,0 +1,18 @@
+# What must not enter the build context. The Dockerfile copies explicit folders, but the whole context
+# is sent to the daemon first, and the virtual environment alone is hundreds of megabytes.
+
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.git/
+.gitignore

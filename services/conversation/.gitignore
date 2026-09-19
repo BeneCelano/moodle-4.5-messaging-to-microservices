@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.env
+
+# Produced by the development install, which the tests run from the source folder.
+*.egg-info/
+build/

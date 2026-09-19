@@ -1,0 +1,9 @@
+# Addresses, paths and credentials of the single installation: config.env holds two tokens.
+config.env
+
+# Raw results of the campaigns; the definitive campaign is archived in deploy/verify/campaigns/.
+results/
+
+# Bytecode cache, regenerated at every run.
+__pycache__/
+*.pyc

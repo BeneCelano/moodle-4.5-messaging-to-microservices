@@ -1,0 +1,115 @@
+# Deployment of the NotificationService: two fixed replicas of 200m, from the steady-state split
+# of the two-CPU budget:
+#
+#     ConversationService   2 x 400m = 800m   fixed
+#     NotificationService   2 x 200m = 400m   fixed
+#     DeliveryGateway       1 x 200m          -> 2 x 200m under a burst
+#     RabbitMQ                    200m
+#     ---------------------------------------------------------------
+#     at rest 1600m, at the peak 1800m
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: moodle-messaging
+    app.kubernetes.io/component: notification
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notification-service
+      app.kubernetes.io/component: notification
+  # One pod at a time and no surplus pod.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/part-of: moodle-messaging
+        # The role tells the service pods from those of the Jobs, which carry the same name.
+        app.kubernetes.io/component: notification
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Replicas on distinct nodes.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: notification-service
+                  app.kubernetes.io/component: notification
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: notification-service
+          image: notification-service:0.1.10
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: notification-service-config
+            - secretRef:
+                name: notification-service-secret
+          resources:
+            # 200m per replica, request equal to limit (Guaranteed).
+            requests:
+              cpu: "200m"
+              memory: "192Mi"
+            limits:
+              cpu: "200m"
+              memory: "192Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          # Readiness governs the balancing; it looks at the database only (see
+          # app/api/routers/health.py).
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 3
+            failureThreshold: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      # The shutdown leaves time to close the requests in flight and to acknowledge the event
+      # being consumed.
+      terminationGracePeriodSeconds: 30

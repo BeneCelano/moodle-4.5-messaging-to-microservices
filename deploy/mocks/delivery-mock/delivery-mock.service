@@ -1,0 +1,33 @@
+# Unit for the delivery mock on VM4. The mock is a single file, standard library only. From VM1:
+#   scp -P 2222 /home/tesista/repo-tesi/deploy/mocks/delivery-mock/mock_delivery.py \
+#       /home/tesista/repo-tesi/deploy/mocks/delivery-mock/delivery-mock.service \
+#       tesista@192.168.72.74:/home/tesista/delivery-mock/
+#
+# On VM4:
+#   sudo cp /home/tesista/delivery-mock/delivery-mock.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now delivery-mock
+
+[Unit]
+Description=Delivery mocks: SMTP on 1025 and Airnotifier on 8081
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tesista
+ExecStart=/usr/bin/python3 /home/tesista/delivery-mock/mock_delivery.py
+Restart=on-failure
+RestartSec=3
+
+# The store is in memory: a restart clears it. Both ports are above 1024.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

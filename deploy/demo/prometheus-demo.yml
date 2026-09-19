@@ -1,0 +1,41 @@
+# Scrape targets for the demo, to merge into scrape_configs of /home/tesista/monitoring/prometheus.yml
+# on VM5, then `docker restart prometheus` (the lifecycle API of that instance is off).
+#
+# One replica per service during the demo (each replica keeps its own counters):
+#
+#   kubectl -n messaging scale deploy/conversation-service --replicas=1
+#   kubectl -n messaging scale deploy/notification-service --replicas=1
+#
+# The dashboards filter every query on the `service` label, which only these targets declare.
+
+  - job_name: 'demo-conversation-service'
+    scrape_interval: 2s
+    scrape_timeout: 1s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['192.168.72.76:30081']
+        labels:
+          service: 'conversation'
+          context: 'conversations'
+
+  - job_name: 'demo-notification-service'
+    scrape_interval: 2s
+    scrape_timeout: 1s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['192.168.72.76:30083']
+        labels:
+          service: 'notification'
+          context: 'notifications'
+
+  - job_name: 'demo-delivery-gateway'
+    scrape_interval: 2s
+    scrape_timeout: 1s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['192.168.72.76:30082']
+        labels:
+          service: 'delivery'
+          context: 'delivery'
+
+# The node ports answer on any node of the cluster. RabbitMQ is not among the targets.

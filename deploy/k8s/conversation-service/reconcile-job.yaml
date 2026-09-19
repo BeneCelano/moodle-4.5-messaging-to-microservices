@@ -1,0 +1,55 @@
+# Comparison between the service database and the monolith's (missing, differing and surplus rows),
+# with the seed identity; its Secret must be applied.
+#
+#   kubectl apply -f /path/outside/the/repo/conversation-seed-secret.yaml
+#   kubectl apply -f reconcile-job.yaml
+#   kubectl -n messaging logs -f job/conversation-service-reconcile
+#
+# The default command only checks; to repair, replace `--check` with `--apply`.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: conversation-service-reconcile
+  namespace: messaging
+  labels:
+    app.kubernetes.io/name: conversation-service
+    app.kubernetes.io/component: reconcile
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: conversation-service
+        app.kubernetes.io/component: reconcile
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: reconcile
+          image: conversation-service:0.2.14
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - scripts/reconcile.py
+            - --schema
+            - moodle_db
+            - --prefix
+            - mdl_
+            - --check
+          envFrom:
+            - configMapRef:
+                name: conversation-service-config
+            # The seed credentials override the service's: this reference must stay last.
+            - secretRef:
+                name: conversation-service-seed-secret
+          # Small figures: the comparison is a join run by the engine.
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "384Mi"
