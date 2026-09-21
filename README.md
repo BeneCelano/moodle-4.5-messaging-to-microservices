@@ -9,9 +9,12 @@ declared before each phase and checked by a single script at the end.
 moodle_4.5/   the Moodle 4.5.12+ tree; the migration touches 29 files (see below)
 services/     conversation/, delivery/, notification/ — one FastAPI service each
 deploy/       Kubernetes manifests, experiments, verification script, mock, demo
+selection/    the load tests and static analysis of chapter 3, which chose message
 ```
 
-Each folder has its own README with the details.
+Each folder has its own README with the details. `selection/` is the work before the migration:
+the JMeter plans and results with which `message` was chosen among the subsystems of the User
+Communication bounded context, and the two plugins one of those plans needs.
 
 ## What changed in Moodle
 
