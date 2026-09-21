@@ -12,6 +12,7 @@ jmeter/                the three plans; the token arrives as the property wstoke
 results/               the JMeter results files of the runs of 14 August 2026, 5,000 samples each
 moodle/                local_smstest and smsgateway_mock, the two plugins the sms plan needs
 mock-sms-provider.js   the SMS provider mock, for VM4
+phpmetrics/            the PHPMetrics reports of the three folders (open index.html)
 ```
 
 Each plan calls the REST web service of Moodle. `message.jmx` sends an instant message
@@ -46,4 +47,9 @@ Results of 14 August 2026, from the JMeter reports of the files in `results/`:
 | errors | 0 % | 0 % | 0 % |
 
 A rerun today gives different figures: since these runs Moodle on VM1 has one core, the other is
-k3s's. The PHPMetrics reports are not in the repository; their numbers are in the thesis.
+k3s's.
+
+The reports in `phpmetrics/` come from `phpmetrics --report-html=<dir> <folder>` (PHPMetrics 2.10.0)
+on the untouched `message/`, `communication/` and `sms/` of Moodle 4.5.12+. The last two are the
+ones in `moodle_4.5/`; `moodle_4.5/message` instead already carries the migration, so the report of
+`message` is reproduced on an upstream tree (on VM1, `/var/www/moodle-4.5-pristine/message`).
