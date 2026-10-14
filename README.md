@@ -1,7 +1,8 @@
 # Moodle `message`: from monolith to microservices
 
-Code of the master's thesis *From Monolith to Microservices: Incremental Migration of an Open-Source
-E-Learning System*. The `message` subsystem of Moodle 4.5 is migrated in five phases to three
+Code of the master's thesis *From Monolith to Microservices: Incremental Migration of the User 
+Communication Bounded Context in an Open-Source E-Learning System*. 
+The `message` subsystem of Moodle 4.5 is migrated in five phases to three
 services — ConversationService, DeliveryGateway, NotificationService — with success criteria
 declared before each phase and checked by a single script at the end.
 
